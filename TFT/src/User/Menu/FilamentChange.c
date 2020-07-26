@@ -57,11 +57,12 @@ void menuFilamentChange(void)
 #if LCD_ENCODER_SUPPORT
   encoderPosition = 0;
 #endif
+  bool isRelativeCoor = coorGetRelative();
+  bool isRelativeExtrude = eGetRelative();
+  float tmpEaxis = coordinateTmp.axis[E_AXIS];
    if(isPause()){
-    isCoorRelative = coorGetRelative();
-    isExtrudeRelative = eGetRelative();
-  if (isCoorRelative == true)     mustStoreCmd("G90\n");
-  if (isExtrudeRelative == true)  mustStoreCmd("M82\n");
+    if (!isRelativeCoor)     mustStoreCmd("G91\n");
+    if (!isRelativeExtrude)  mustStoreCmd("M83\n");
    }
   while (infoMenu.menu[infoMenu.cur] == menuFilamentChange)
   {
@@ -92,7 +93,9 @@ void menuFilamentChange(void)
               storeCmd("%s\n", filamentChange_tool_change[item_extruder_i]);
             }
             if(isPause()){
-              mustStoreCmd("G1 E%.5f F%d\n", (coordinateTmp.axis[E_AXIS] + infoSettings.filament_load_length), infoSettings.filament_load_speed);
+              mustStoreCmd("G1 E%.5f F%d\n", 
+                           infoSettings.filament_load_length,
+                           infoSettings.filament_load_speed);
             }else{
               storeCmd("G91\nG0 E%.5f F%d\nG90\n", infoSettings.filament_load_length, infoSettings.filament_load_speed);
             }
@@ -136,7 +139,9 @@ void menuFilamentChange(void)
               storeCmd("%s\n", filamentChange_tool_change[item_extruder_i]);
             }
             if(isPause()){
-              mustStoreCmd("G1 E%.5f F%d\n", (coordinateTmp.axis[E_AXIS] - infoSettings.filament_unload_length), infoSettings.filament_unload_speed);
+              mustStoreCmd("G1 E%.5f F%d\n", 
+                           -1 * infoSettings.filament_unload_length,
+                           infoSettings.filament_unload_speed);
             }
             else{
               storeCmd("G91\nG0 E%.5f F%d\n",infoSettings.filament_unload_retract_length, infoSettings.filament_unload_retract_speed);
@@ -222,9 +227,9 @@ void menuFilamentChange(void)
     loopProcess();
   }
  if(isPause()){
-  mustStoreCmd("G92 E%.5f\n", coordinateTmp.axis[E_AXIS]);
-  mustStoreCmd("G1 F%d\n", coordinateTmp.feedrate);
-  if (isCoorRelative == true)     mustStoreCmd("G91\n");
-  if (isExtrudeRelative == true)  mustStoreCmd("M83\n");
+   if (!isRelativeCoor)     mustStoreCmd("G90\n");
+   if (!isRelativeExtrude)  mustStoreCmd("M82\n");
+   mustStoreCmd("G92 E%.5f\n", tmpEaxis);
+   mustStoreCmd("G1 F%d\n", coordinateTmp.feedrate);
   }
 }
