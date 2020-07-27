@@ -307,6 +307,17 @@ void saveCurrentState()
   printerStateBeforePause.isRelativeExtrude = eGetRelative();
 }
 
+void performPauseRetraction()
+{
+  if (infoSettings.pause_retract_len <= 0) return;
+
+  mustStoreCmd("M83\nG1 E%.5f F%d\n", 
+               -1 * infoSettings.pause_retract_len,
+              infoSettings.filament_unload_retract_speed);
+
+  if (!printerStateBeforePause.isRelativeExtrude)  mustStoreCmd("M82\n");
+}
+
 void moveToPausePosition()
 {
   if (!infoPrinting.pause)
@@ -340,6 +351,21 @@ void moveToPausePosition()
     if (printerStateBeforePause.isRelativeCoor)     mustStoreCmd("G91\n");
     if (printerStateBeforePause.isRelativeExtrude)  mustStoreCmd("M83\n");
   }
+}
+
+void performResumePurge()
+{
+  if (infoSettings.resume_purge_len <= 0) return;
+
+  mustStoreCmd("M83\nG1 E%.5f F%d\n", 
+               infoSettings.resume_purge_len,
+               infoSettings.pause_feedrate);
+  
+  //Perform slight retraction after purge for movement back to return position
+  mustStoreCmd("G1 E-.5 F%d\n",
+               infoSettings.filament_unload_retract_speed);
+
+  if (!printerStateBeforePause.isRelativeExtrude)  mustStoreCmd("M82\n");
 }
 
 void restoreSavedPrinterState()
@@ -395,6 +421,8 @@ bool setPrintPause(bool is_pause, bool is_m0pause, bool M600)
         //We must be able to return to this state on resume so running gcode file is back in state it expected before pause event
         saveCurrentState();
 
+        performPauseRetraction();
+
         //if pause was triggered through M0/M1 then break
         //gcode handling extruder park position
         if(is_m0pause == true) {
@@ -408,8 +436,11 @@ bool setPrintPause(bool is_pause, bool is_m0pause, bool M600)
       }
       else
       {
+        performResumePurge();
+
         //return to printer state when pause event occurred
         //This must be done regardless of original pause reason as user may have changed positions while paused
+        //Restores axis modes and returns to coordinates at time of pause.
         restoreSavedPrinterState();
 
         if(isM0_Pause() == true)
