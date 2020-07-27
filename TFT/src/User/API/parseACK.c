@@ -199,12 +199,15 @@ void parseACK(void)
       }
       else if(ack_seen("X:") && ack_index == 2)
       {
+        coordinateSetAxisActual(X_AXIS, ack_value());
         storegantry(0, ack_value());
         if (ack_seen("Y:"))
         {
+          coordinateSetAxisActual(Y_AXIS, ack_value());
           storegantry(1, ack_value());
           if (ack_seen("Z:"))
           {
+            coordinateSetAxisActual(Z_AXIS, ack_value());
             storegantry(2, ack_value());
           }
         }

@@ -2,6 +2,7 @@
 #include "string.h"
 #include "Configuration.h"
 #include "Parametersetting.h"
+#include "gcode.h"
 
 const char axis_id[TOTAL_AXIS]={'X','Y','Z','E'};
 
@@ -83,6 +84,16 @@ void coordinateGetAll(COORDINATE *tmp)
 
 COORDINATE curPosition={{0.0f,0.0f,0.0f,0.0f},3000};
 
+void updateCurPosition()
+{
+  //Get actual position as reported by printer
+  //wait for response
+  request_M114();
+  
+  //Feedrate cannot be queried so use last seen feedrate here:
+  curPosition.feedrate = targetPosition.feedrate;
+}
+
 void coordinateSetAxisActualSteps(AXIS axis, int steps)
 {
   curPosition.axis[axis] = steps / getParameter(P_STEPS_PER_MM, E_AXIS);
@@ -90,5 +101,21 @@ void coordinateSetAxisActualSteps(AXIS axis, int steps)
 
 float coordinateGetAxisActual(AXIS axis)
 {
+  updateCurPosition();
+
   return curPosition.axis[axis];
+}
+
+void coordinateGetAllActual(COORDINATE *tmp)
+{
+  updateCurPosition();
+
+  memcpy(tmp, &curPosition, sizeof(curPosition));
+}
+
+void coordinateSetAxisActual(AXIS axis, float position)
+{
+  curPosition.axis[axis] = position;
+  //Reset target based on actual value
+  coordinateSetAxisTarget(axis, position);
 }

@@ -299,6 +299,70 @@ void setM0Pause(bool m0_pause){
   infoPrinting.m0_pause = m0_pause;
 }
 
+void saveCurrentState()
+{
+  //Get the actual position from the printer so we can restore it on resume
+  coordinateGetAll(&printerStateBeforePause.coordinate);
+  printerStateBeforePause.isRelativeCoor = coorGetRelative();
+  printerStateBeforePause.isRelativeExtrude = eGetRelative();
+}
+
+void moveToPausePosition()
+{
+  if (!infoPrinting.pause)
+  {
+    return;
+  }
+
+  //Raise Print Head if safe
+  if (coordinateIsKnown())
+  {
+    //Stop a few mm below max height to avoid losing steps moving past the end
+    float raiseDistance = infoSettings.pause_z_raise;
+    if (printerStateBeforePause.coordinate.axis[Z_AXIS] + infoSettings.pause_z_raise < 
+        infoSettings.machine_size_max[Z_AXIS] - 10)
+    {
+      raiseDistance = (infoSettings.machine_size_max[Z_AXIS] - 10) - printerStateBeforePause.coordinate.axis[Z_AXIS];
+    }
+
+    //Only raise if safe and calculated rise greater than 0;
+    if (raiseDistance > 0)
+      //Relative mode raise head
+    mustStoreCmd("G91\nG1 Z%.3f\nG90", infoSettings.pause_z_raise);
+    
+
+    //Park head XY position and set feedrate
+    mustStoreCmd("G90\nG1 X%.3f Y%.3f F%d",
+                 infoSettings.pause_pos[X_AXIS],
+                 infoSettings.pause_pos[Y_AXIS],
+                 infoSettings.pause_feedrate[X_AXIS]);
+    
+    if (printerStateBeforePause.isRelativeCoor)     mustStoreCmd("G91\n");
+    if (printerStateBeforePause.isRelativeExtrude)  mustStoreCmd("M83\n");
+  }
+}
+
+void restoreSavedPrinterState()
+{
+  //Restore Extruder position
+  mustStoreCmd("G92 E%.5f\n", printerStateBeforePause.coordinate.axis[E_AXIS]);
+
+  //Restore feed rate
+  mustStoreCmd("G1 F%d\n", printerStateBeforePause.coordinate.feedrate);
+
+  if (coordinateIsKnown())
+  {
+    //Restore X Y Z position
+    mustStoreCmd("G90\nG0 X%.3f Y%.3f Z%.3f\n",
+                 printerStateBeforePause.coordinate.axis[X_AXIS],
+                 printerStateBeforePause.coordinate.axis[Y_AXIS],
+                 printerStateBeforePause.coordinate.axis[Z_AXIS]);
+  }
+  
+  if (printerStateBeforePause.isRelativeCoor)     mustStoreCmd("G91\n");
+  if (printerStateBeforePause.isRelativeExtrude)  mustStoreCmd("M83\n");
+}
+
 bool setPrintPause(bool is_pause, bool is_m0pause, bool M600)
 {
   static bool pauseLock = false;
@@ -325,51 +389,35 @@ bool setPrintPause(bool is_pause, bool is_m0pause, bool M600)
       while (infoCmd.count != 0) {loopProcess();}
       }
 
-      isCoorRelative = coorGetRelative();
-      isExtrudeRelative = eGetRelative();
-
       if(infoPrinting.pause)
       {
-        //restore status before pause
+        //save status before pause
+        //We must be able to return to this state on resume so running gcode file is back in state it expected before pause event
+        saveCurrentState();
+
         //if pause was triggered through M0/M1 then break
-      if(is_m0pause == true) {
-        setM0Pause(is_m0pause);
-        popupReminder(textSelect(LABEL_PAUSE), textSelect(LABEL_M0_PAUSE));
-        break;
+        //gcode handling extruder park position
+        if(is_m0pause == true) {
+          setM0Pause(is_m0pause);
+          popupReminder(textSelect(LABEL_PAUSE), textSelect(LABEL_M0_PAUSE));
+          break;
         }
-
-        coordinateGetAll(&coordinateTmp);
-        if (isCoorRelative == true)     mustStoreCmd("G90\n");
-        if (isExtrudeRelative == true)  mustStoreCmd("M82\n");
-        if (coordinateIsKnown())
-        {
-          mustStoreCmd("G1 Z%.3f X%.3f Y%.3f F%d\n", (coordinateTmp.axis[Z_AXIS] + infoSettings.pause_z_raise), infoSettings.pause_pos[X_AXIS], infoSettings.pause_pos[Y_AXIS], infoSettings.pause_feedrate[X_AXIS]);
-        }
-
-        if (isCoorRelative == true)     mustStoreCmd("G91\n");
-        if (isExtrudeRelative == true)  mustStoreCmd("M83\n");
+        
+        //Park head
+        moveToPausePosition();
       }
       else
       {
+        //return to printer state when pause event occurred
+        //This must be done regardless of original pause reason as user may have changed positions while paused
+        restoreSavedPrinterState();
+
         if(isM0_Pause() == true)
         {
           setM0Pause(is_m0pause);
           Serial_Puts(SERIAL_PORT, "M108\n");
           break;
         }
-        if (isCoorRelative == true)     mustStoreCmd("G90\n");
-        if (isExtrudeRelative == true)  mustStoreCmd("M82\n");
-
-        if (coordinateIsKnown())
-        {
-          mustStoreCmd("G1 X%.3f Y%.3f F%d\n", coordinateTmp.axis[X_AXIS], coordinateTmp.axis[Y_AXIS], infoSettings.pause_feedrate[X_AXIS]);
-          mustStoreCmd("G1 Z%.3f F%d\n", coordinateTmp.axis[Z_AXIS], infoSettings.pause_feedrate[Z_AXIS]);
-        }
-        mustStoreCmd("G92 E%.5f\n", coordinateTmp.axis[E_AXIS]);
-        mustStoreCmd("G1 F%d\n", coordinateTmp.feedrate);
-
-        if (isCoorRelative == true)     mustStoreCmd("G91\n");
-        if (isExtrudeRelative == true)  mustStoreCmd("M83\n");
       }
       break;
   }

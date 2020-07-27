@@ -19,6 +19,13 @@ typedef struct
   bool    runout; // 1: runout in printing, 0: idle
 }PRINTING;
 
+typedef struct
+{
+  bool    isRelativeCoor;
+  bool    isRelativeExtrude;
+  COORDINATE  coordinate; 
+}PrinterState;
+
 void exitPrinting(void);
 void endPrinting(void);
 void completePrinting(void);
@@ -59,8 +66,12 @@ void reDrawTime(int icon_pos);
 void reDrawLayer(int icon_pos);
 
 void loopCheckPrinting(void);
-COORDINATE coordinateTmp;
-bool isCoorRelative;
-bool isExtrudeRelative;
+
+void saveCurrentState();
+PrinterState printerStateBeforePause;
+
+//COORDINATE coordinateTmp;
+//bool isCoorRelative;
+//bool isExtrudeRelative;
 
 #endif

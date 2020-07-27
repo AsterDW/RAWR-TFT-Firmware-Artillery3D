@@ -35,6 +35,8 @@ u32   coordinateGetFeedRate(void);
 void  coordinateSetFeedRate(u32 feedrate);
 void  coordinateGetAll(COORDINATE *tmp);
 float coordinateGetAxisActual(AXIS axis);
+void  coordinateGetAllActual(COORDINATE *tmp);
+void  coordinateSetAxisActual(AXIS axis, float position);
 void  coordinateSetAxisActualSteps(AXIS axis, int steps);
 
 #endif

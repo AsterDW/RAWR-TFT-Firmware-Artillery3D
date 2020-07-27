@@ -59,7 +59,7 @@ void menuFilamentChange(void)
 #endif
   bool isRelativeCoor = coorGetRelative();
   bool isRelativeExtrude = eGetRelative();
-  float tmpEaxis = coordinateTmp.axis[E_AXIS];
+  
    if(isPause()){
     if (!isRelativeCoor)     mustStoreCmd("G91\n");
     if (!isRelativeExtrude)  mustStoreCmd("M83\n");
@@ -229,7 +229,7 @@ void menuFilamentChange(void)
  if(isPause()){
    if (!isRelativeCoor)     mustStoreCmd("G90\n");
    if (!isRelativeExtrude)  mustStoreCmd("M82\n");
-   mustStoreCmd("G92 E%.5f\n", tmpEaxis);
-   mustStoreCmd("G1 F%d\n", coordinateTmp.feedrate);
+   mustStoreCmd("G92 E%.5f\n", printerStateBeforePause.coordinate.axis[E_AXIS]);
+   mustStoreCmd("G1 F%d\n", printerStateBeforePause.coordinate.feedrate);
   }
 }

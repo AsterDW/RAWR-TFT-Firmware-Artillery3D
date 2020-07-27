@@ -801,6 +801,7 @@ void sendQueueCmd(void)
           case 28: //G28
             coordinateSetKnown(true);
             babyStepReset();
+            storeCmd("M114\n");
             break;
 
           case 90: //G90

@@ -25,6 +25,26 @@ void clearRequestCommandInfo(void)
   free(requestCommandInfo.cmd_rev_buf);
 }
 
+// Send M114 command and wait for response
+bool request_M114()
+{
+  strcpy(requestCommandInfo.command,"M114\n");
+  strcpy(requestCommandInfo.startMagic,"X");
+  strcpy(requestCommandInfo.stopMagic,"\n");
+  strcpy(requestCommandInfo.errorMagic,"Error");
+  resetRequestCommandInfo();
+  mustStoreCmd(requestCommandInfo.command);
+  // Wait for response
+  WaitingGcodeResponse = 1;
+  while (!requestCommandInfo.done)
+  {
+    loopProcess();
+  }
+  WaitingGcodeResponse = 0;
+  //clearRequestCommandInfo(); //shall be call after copying the buffer ...
+  return requestCommandInfo.cmd_rev_buf;
+}
+
 /*
     Send M21 command and wait for response
 
