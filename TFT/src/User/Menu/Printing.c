@@ -330,7 +330,7 @@ void moveToPausePosition()
   {
     //Stop a few mm below max height to avoid losing steps moving past the end
     float raiseDistance = infoSettings.pause_z_raise;
-    if (printerStateBeforePause.coordinate.axis[Z_AXIS] + infoSettings.pause_z_raise < 
+    if (printerStateBeforePause.coordinate.axis[Z_AXIS] + infoSettings.pause_z_raise > 
         infoSettings.machine_size_max[Z_AXIS] - 10)
     {
       raiseDistance = (infoSettings.machine_size_max[Z_AXIS] - 10) - printerStateBeforePause.coordinate.axis[Z_AXIS];
@@ -339,7 +339,7 @@ void moveToPausePosition()
     //Only raise if safe and calculated rise greater than 0;
     if (raiseDistance > 0)
       //Relative mode raise head
-    mustStoreCmd("G91\nG1 Z%.3f\nG90", infoSettings.pause_z_raise);
+    mustStoreCmd("G91\nG1 Z%.3f\nG90", raiseDistance);
     
 
     //Park head XY position and set feedrate
